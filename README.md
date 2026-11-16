@@ -29,3 +29,6 @@ with Contents read and write. `GITHUB_TOKEN` cannot be used, because
 Both run weekly, on manual dispatch, and on pushes to `main` (E2E only when
 the Dockerfile or its workflows change). GitHub disables schedules in a repo
 with no activity for 60 days; re-enable them from the Actions tab.
+
+This repo is step 4 of the release checklist in
+[RELEASING.md](https://github.com/pen-pal/centralized-workflow/blob/main/RELEASING.md#release-checklist).
