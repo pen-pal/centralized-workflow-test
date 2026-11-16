@@ -1,0 +1,40 @@
+name: Rust checks
+
+# Real-runner check of pen-pal/centralized-workflow test, precommit and audit at the pinned ref.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  test:
+    permissions:
+      contents: read
+    uses: pen-pal/centralized-workflow/.github/workflows/test.yml@v1
+
+  precommit:
+    permissions:
+      contents: read
+    uses: pen-pal/centralized-workflow/.github/workflows/precommit.yml@v1
+
+  audit:
+    permissions:
+      contents: read
+      checks: write
+      issues: write
+    uses: pen-pal/centralized-workflow/.github/workflows/audit.yml@v1
+
+  check:
+    needs: precommit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Duration output reaches the caller
+        env:
+          DURATION: ${{ needs.precommit.outputs.precommit_duration }}
+        run: |
+          echo "precommit_duration=$DURATION"
+          [[ "$DURATION" =~ ^[0-9]+$ ]]

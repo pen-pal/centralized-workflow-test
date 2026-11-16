@@ -6,6 +6,7 @@ name: E2E test
 on:
   push:
     branches: [main]
+    paths: [Dockerfile, .github/workflows/build.yml, .github/workflows/receive-dispatch.yml]
   workflow_dispatch:
 
 permissions: {}

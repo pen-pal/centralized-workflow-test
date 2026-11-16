@@ -18,4 +18,8 @@ stands in for the GitOps repo and asserts the payload. That needs a
 Contents read and write. `GITHUB_TOKEN` cannot be used, because `deploy.yml`
 runs with `permissions: {}`.
 
-Runs on every push to `main` and on manual dispatch.
+Runs on manual dispatch and on pushes to `main` that touch the Dockerfile or
+these workflows.
+
+`.github/workflows/rust.yml` runs `test.yml@v1`, `precommit.yml@v1` and
+`audit.yml@v1` against the small crate in `src/`, on every push to `main`.
