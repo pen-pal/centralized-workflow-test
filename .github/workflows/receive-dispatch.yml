@@ -1,0 +1,24 @@
+name: Receive deploy dispatch
+
+# Stands in for the GitOps deploy repo: asserts the payload deploy.yml sends.
+
+on:
+  repository_dispatch:
+    types: [update-image-tag]
+
+permissions: {}
+
+jobs:
+  payload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Payload has the expected fields
+        env:
+          PAYLOAD: ${{ toJSON(github.event.client_payload) }}
+          REPO: ${{ github.event.repository.name }}
+        run: |
+          echo "$PAYLOAD"
+          jq -e --arg repo "$REPO" '
+            .target_dir == "main" and .repo_name == $repo and .app_name == "e2e-app"
+            and (.sha | test("^[0-9a-f]{40}$"))' <<< "$PAYLOAD"

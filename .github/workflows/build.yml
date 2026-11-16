@@ -1,6 +1,7 @@
-name: Build test
+name: E2E test
 
-# End-to-end check of pen-pal/centralized-workflow build.yml at the pinned ref.
+# End-to-end check of pen-pal/centralized-workflow build, scan and deploy at the pinned ref.
+# Deploy dispatches back to this repo; receive-dispatch.yml asserts the payload.
 
 on:
   push:
@@ -23,8 +24,33 @@ jobs:
       build_args: |
         GREETING=hello
 
-  check:
+  scan:
     needs: build
+    permissions:
+      packages: read
+      pull-requests: write
+    uses: pen-pal/centralized-workflow/.github/workflows/container-scan.yml@v1
+    with:
+      sha: ${{ github.sha }}
+      repo_name: ${{ github.event.repository.name }}
+
+  deploy:
+    needs: scan
+    permissions:
+      contents: write # repository_dispatch back to this repo
+    uses: pen-pal/centralized-workflow/.github/workflows/deploy.yml@v1
+    with:
+      sha: ${{ github.sha }}
+      branch_slug: ${{ github.ref_name }}
+      repo_name: ${{ github.event.repository.name }}
+      app_name: e2e-app
+    secrets:
+      # GITHUB_TOKEN dispatches still start workflows, so no PAT is needed here.
+      DISPATCH_PAT: ${{ github.token }}
+      DEPLOY_REPO: ${{ github.event.repository.name }}
+
+  check:
+    needs: [build, scan, deploy]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -33,6 +59,8 @@ jobs:
       IMAGE: ghcr.io/${{ github.repository }}
       SHA: ${{ github.sha }}
       DURATION: ${{ needs.build.outputs.build_duration }}
+      SCAN_DURATIONS: ${{ needs.scan.outputs.anchore_scan_duration }} ${{ needs.scan.outputs.anchore_sbom_scan_duration }} ${{ needs.scan.outputs.trivy_scan_duration }}
+      DEPLOY_DURATION: ${{ needs.deploy.outputs.deploy_duration }}
       IDENTITY: https://github.com/pen-pal/centralized-workflow/.github/workflows/build.yml@refs/tags/v1
       ISSUER: https://token.actions.githubusercontent.com
     steps:
@@ -44,10 +72,11 @@ jobs:
 
       - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
 
-      - name: Duration output reaches the caller
+      - name: Duration outputs reach the caller
         run: |
-          echo "build_duration=$DURATION"
-          [[ "$DURATION" =~ ^[0-9]+$ ]]
+          echo "build=$DURATION scan(anchore sbom trivy)=$SCAN_DURATIONS deploy=$DEPLOY_DURATION"
+          for d in $DURATION $SCAN_DURATIONS $DEPLOY_DURATION; do [[ "$d" =~ ^[0-9]+$ ]]; done
+          [ "$(wc -w <<< "$DURATION $SCAN_DURATIONS $DEPLOY_DURATION")" -eq 5 ]
 
       - name: Both targets are multi-arch, signed, and built with args + secret
         run: |
