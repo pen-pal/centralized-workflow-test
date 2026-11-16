@@ -46,7 +46,7 @@ jobs:
       app_name: e2e-app
     secrets:
       # GITHUB_TOKEN dispatches still start workflows, so no PAT is needed here.
-      DISPATCH_PAT: ${{ github.token }}
+      DISPATCH_PAT: ${{ secrets.GITHUB_TOKEN }}
       DEPLOY_REPO: ${{ github.event.repository.name }}
 
   check:
