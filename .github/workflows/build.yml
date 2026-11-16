@@ -36,8 +36,6 @@ jobs:
 
   deploy:
     needs: scan
-    permissions:
-      contents: write # repository_dispatch back to this repo
     uses: pen-pal/centralized-workflow/.github/workflows/deploy.yml@v1
     with:
       sha: ${{ github.sha }}
@@ -45,8 +43,9 @@ jobs:
       repo_name: ${{ github.event.repository.name }}
       app_name: e2e-app
     secrets:
-      # GITHUB_TOKEN dispatches still start workflows, so no PAT is needed here.
-      DISPATCH_PAT: ${{ secrets.GITHUB_TOKEN }}
+      # deploy.yml runs with permissions: {}, so GITHUB_TOKEN cannot dispatch.
+      # Fine-grained PAT scoped to this repo only, Contents: read and write.
+      DISPATCH_PAT: ${{ secrets.DISPATCH_PAT }}
       DEPLOY_REPO: ${{ github.event.repository.name }}
 
   check:

@@ -12,7 +12,10 @@ End-to-end test caller for
 - anchore, sbom and trivy (CRITICAL/HIGH gate) pass on the image
 - build, scan and deploy duration outputs reach the caller
 
-Deploy sends `repository_dispatch` back to this repo with `GITHUB_TOKEN`;
-`receive-dispatch.yml` stands in for the GitOps repo and asserts the payload.
+Deploy sends `repository_dispatch` back to this repo; `receive-dispatch.yml`
+stands in for the GitOps repo and asserts the payload. That needs a
+`DISPATCH_PAT` repo secret: a fine-grained PAT limited to this repo with
+Contents read and write. `GITHUB_TOKEN` cannot be used, because `deploy.yml`
+runs with `permissions: {}`.
 
 Runs on every push to `main` and on manual dispatch.
