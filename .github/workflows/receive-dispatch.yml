@@ -21,4 +21,5 @@ jobs:
           echo "$PAYLOAD"
           jq -e --arg repo "$REPO" '
             .target_dir == "main" and .repo_name == $repo and .app_name == "e2e-app"
-            and (.sha | test("^[0-9a-f]{40}$"))' <<< "$PAYLOAD"
+            and (.sha | test("^[0-9a-f]{40}$"))
+            and (.digest | test("^sha256:[0-9a-f]{64}$"))' <<< "$PAYLOAD"

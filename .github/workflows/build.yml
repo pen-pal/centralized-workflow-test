@@ -1,12 +1,15 @@
 name: E2E test
 
-# End-to-end check of pen-pal/centralized-workflow build, scan and deploy at the pinned ref.
+# End-to-end check of pen-pal/centralized-workflow build, scan and deploy at @main,
+# the staging line that a vX.Y.Z release is cut from.
 # Deploy dispatches back to this repo; receive-dispatch.yml asserts the payload.
 
 on:
   push:
     branches: [main]
     paths: [Dockerfile, .github/workflows/build.yml, .github/workflows/receive-dispatch.yml]
+  schedule:
+    - cron: '17 6 * * 1' # weekly: catch runner image and upstream action changes
   workflow_dispatch:
 
 permissions: {}
@@ -17,7 +20,7 @@ jobs:
       contents: read
       packages: write
       id-token: write
-    uses: pen-pal/centralized-workflow/.github/workflows/build.yml@v1
+    uses: pen-pal/centralized-workflow/.github/workflows/build.yml@main
     with:
       sha: ${{ github.sha }}
       repo_name: ${{ github.event.repository.name }}
@@ -30,16 +33,18 @@ jobs:
     permissions:
       packages: read
       pull-requests: write
-    uses: pen-pal/centralized-workflow/.github/workflows/container-scan.yml@v1
+    uses: pen-pal/centralized-workflow/.github/workflows/container-scan.yml@main
     with:
       sha: ${{ github.sha }}
+      digest: ${{ needs.build.outputs.digest }}
       repo_name: ${{ github.event.repository.name }}
 
   deploy:
-    needs: scan
-    uses: pen-pal/centralized-workflow/.github/workflows/deploy.yml@v1
+    needs: [build, scan]
+    uses: pen-pal/centralized-workflow/.github/workflows/deploy.yml@main
     with:
       sha: ${{ github.sha }}
+      digest: ${{ needs.build.outputs.digest }}
       branch_slug: ${{ github.ref_name }}
       repo_name: ${{ github.event.repository.name }}
       app_name: e2e-app
@@ -58,10 +63,11 @@ jobs:
     env:
       IMAGE: ghcr.io/${{ github.repository }}
       SHA: ${{ github.sha }}
+      DIGEST: ${{ needs.build.outputs.digest }}
       DURATION: ${{ needs.build.outputs.build_duration }}
       SCAN_DURATIONS: ${{ needs.scan.outputs.anchore_scan_duration }} ${{ needs.scan.outputs.anchore_sbom_scan_duration }} ${{ needs.scan.outputs.trivy_scan_duration }}
       DEPLOY_DURATION: ${{ needs.deploy.outputs.deploy_duration }}
-      IDENTITY: https://github.com/pen-pal/centralized-workflow/.github/workflows/build.yml@refs/tags/v1
+      IDENTITY: https://github.com/pen-pal/centralized-workflow/.github/workflows/build.yml@refs/heads/main
       ISSUER: https://token.actions.githubusercontent.com
     steps:
       - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
@@ -77,6 +83,24 @@ jobs:
           echo "build=$DURATION scan(anchore sbom trivy)=$SCAN_DURATIONS deploy=$DEPLOY_DURATION"
           for d in $DURATION $SCAN_DURATIONS $DEPLOY_DURATION; do [[ "$d" =~ ^[0-9]+$ ]]; done
           [ "$(wc -w <<< "$DURATION $SCAN_DURATIONS $DEPLOY_DURATION")" -eq 5 ]
+
+      - name: Digest output is the signed manifest of the first target
+        run: |
+          set -euo pipefail
+          tagged=$(docker buildx imagetools inspect "$IMAGE:$SHA" --format '{{json .Manifest}}' | jq -r .digest)
+          echo "output=$DIGEST tag=$tagged"
+          [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
+          [ "$DIGEST" = "$tagged" ]
+
+      - name: SBOM and provenance attestations on both archs
+        run: |
+          set -euo pipefail
+          for kind in SBOM Provenance; do
+            att=$(docker buildx imagetools inspect "$IMAGE@$DIGEST" --format "{{json .$kind}}")
+            jq -e 'has("linux/amd64") and has("linux/arm64")' <<< "$att" > /dev/null \
+              || { echo "missing $kind: $(head -c 300 <<< "$att")"; exit 1; }
+            echo "$kind OK: $(jq -c 'keys' <<< "$att")"
+          done
 
       - name: Both targets are multi-arch, signed, and built with args + secret
         run: |

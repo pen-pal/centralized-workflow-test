@@ -1,10 +1,12 @@
 name: Rust checks
 
-# Real-runner check of pen-pal/centralized-workflow test, precommit and audit at the pinned ref.
+# Real-runner check of pen-pal/centralized-workflow test, precommit and audit at @main.
 
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: '47 6 * * 1' # weekly: catch toolchain, runner image and upstream action changes
   workflow_dispatch:
 
 permissions: {}
@@ -13,19 +15,19 @@ jobs:
   test:
     permissions:
       contents: read
-    uses: pen-pal/centralized-workflow/.github/workflows/test.yml@v1
+    uses: pen-pal/centralized-workflow/.github/workflows/test.yml@main
 
   precommit:
     permissions:
       contents: read
-    uses: pen-pal/centralized-workflow/.github/workflows/precommit.yml@v1
+    uses: pen-pal/centralized-workflow/.github/workflows/precommit.yml@main
 
   audit:
     permissions:
       contents: read
       checks: write
       issues: write
-    uses: pen-pal/centralized-workflow/.github/workflows/audit.yml@v1
+    uses: pen-pal/centralized-workflow/.github/workflows/audit.yml@main
 
   check:
     needs: precommit
