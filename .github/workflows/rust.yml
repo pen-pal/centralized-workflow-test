@@ -5,6 +5,7 @@ name: Rust checks
 on:
   push:
     branches: [main]
+  pull_request:
   schedule:
     - cron: '47 6 * * 1' # weekly: catch toolchain, runner image and upstream action changes
   workflow_dispatch:
