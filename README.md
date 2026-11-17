@@ -32,3 +32,5 @@ with no activity for 60 days; re-enable them from the Actions tab.
 
 This repo is step 4 of the release checklist in
 [RELEASING.md](https://github.com/pen-pal/centralized-workflow/blob/main/RELEASING.md#release-checklist).
+
+PR checks: pr.yml runs pr-title, dep-review and cleanup on pull requests.
