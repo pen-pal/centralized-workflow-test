@@ -23,14 +23,22 @@ needs a `DISPATCH_PAT` repo secret: a fine-grained PAT limited to this repo
 with Contents read and write. `GITHUB_TOKEN` cannot be used, because
 `deploy.yml` runs with `permissions: {}`.
 
-`.github/workflows/rust.yml` runs `test.yml`, `precommit.yml` and
-`audit.yml` against the small crate in `src/`.
+| Workflow | Calls (at `@main`) | Runs on |
+| --- | --- | --- |
+| `build.yml` (E2E test) | build, container-scan, sarif-upload, dast, deploy | weekly, dispatch, push touching the Dockerfile or its workflows |
+| `rust.yml` | test (all targets), precommit, audit, coverage (min 80%) | weekly, dispatch, push, pull request |
+| `security.yml` | gitleaks, codeql, iac-scan, ossf-scorecard | weekly, dispatch, push |
+| `infra.yml` | terraform (`infra/terraform`), k8s-validate (`infra/k8s`, `infra/chart`) | weekly, dispatch, push touching `infra/` |
+| `pr.yml` | pr-title, dep-review, cleanup | pull requests |
+| `app-release.yml` | app-release (release-please) | dispatch only |
 
-Both run weekly, on manual dispatch, and on pushes to `main` (E2E only when
-the Dockerfile or its workflows change). GitHub disables schedules in a repo
-with no activity for 60 days; re-enable them from the Actions tab.
+The first four gate every centralized-workflow release. Fixtures: a small
+crate in `src/`, a non-root HTTP image (`Dockerfile`), and hardened
+Terraform, Kubernetes and Helm under `infra/`. "Allow GitHub Actions to
+create and approve pull requests" is on so release-please can open its PR.
+
+GitHub disables schedules in a repo with no activity for 60 days; re-enable
+them from the Actions tab.
 
 This repo is step 4 of the release checklist in
 [RELEASING.md](https://github.com/pen-pal/centralized-workflow/blob/main/RELEASING.md#release-checklist).
-
-PR checks: pr.yml runs pr-title, dep-review and cleanup on pull requests.
