@@ -1,0 +1,29 @@
+name: Infra
+
+# Real-runner check of the centralized-workflow infra workflows at @main.
+
+on:
+  push:
+    branches: [main]
+    paths: [infra/**, .github/workflows/infra.yml]
+  schedule:
+    - cron: '37 7 * * 1' # weekly
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  terraform:
+    permissions:
+      contents: read
+    uses: pen-pal/centralized-workflow/.github/workflows/terraform.yml@main
+    with:
+      working_directory: infra/terraform
+
+  k8s:
+    permissions:
+      contents: read
+    uses: pen-pal/centralized-workflow/.github/workflows/k8s-validate.yml@main
+    with:
+      manifests_path: infra/k8s
+      chart_path: infra/chart

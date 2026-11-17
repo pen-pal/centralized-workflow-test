@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: e2e-app
+  namespace: e2e
+  labels:
+    app: e2e-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: e2e-app
+  template:
+    metadata:
+      labels:
+        app: e2e-app
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: ghcr.io/pen-pal/centralized-workflow-test@sha256:33bb476f045a0125f4e1aef316dab4f0d502ba884b02750ee46941a181de0416
+          ports:
+            - containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            privileged: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 64Mi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: e2e-app
+  namespace: e2e
+spec:
+  selector:
+    app: e2e-app
+  ports:
+    - port: 80
+      targetPort: 8080

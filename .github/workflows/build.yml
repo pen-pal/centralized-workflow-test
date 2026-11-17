@@ -38,6 +38,23 @@ jobs:
       sha: ${{ github.sha }}
       digest: ${{ needs.build.outputs.digest }}
       repo_name: ${{ github.event.repository.name }}
+      sarif: true
+
+  scan-sarif:
+    needs: scan
+    permissions:
+      security-events: write
+    uses: pen-pal/centralized-workflow/.github/workflows/sarif-upload.yml@main
+
+  dast:
+    needs: build
+    permissions:
+      contents: read
+      packages: read
+    uses: pen-pal/centralized-workflow/.github/workflows/dast.yml@main
+    with:
+      image: ghcr.io/${{ github.repository }}@${{ needs.build.outputs.digest }}
+      port: 8080
 
   deploy:
     needs: [build, scan]
@@ -55,7 +72,7 @@ jobs:
       DEPLOY_REPO: ${{ github.event.repository.name }}
 
   check:
-    needs: [build, scan, deploy]
+    needs: [build, scan, scan-sarif, dast, deploy]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -115,7 +132,7 @@ jobs:
             cosign verify --certificate-identity "$IDENTITY" --certificate-oidc-issuer "$ISSUER" "$ref" > /dev/null
             echo "$ref signature OK"
 
-            out=$(docker run --rm --platform linux/amd64 "$ref")
+            out=$(docker run --rm --platform linux/amd64 --entrypoint cat "$ref" /www/index.html)
             echo "$ref says: $out"
             [ "$out" = "hello from ${GITHUB_REPOSITORY_OWNER} on amd64" ]
           done

@@ -1,0 +1,39 @@
+name: Security
+
+# Real-runner check of the centralized-workflow security workflows at @main.
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '7 7 * * 1' # weekly
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  secrets:
+    permissions:
+      contents: read
+      security-events: write
+    uses: pen-pal/centralized-workflow/.github/workflows/gitleaks.yml@main
+
+  codeql:
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    uses: pen-pal/centralized-workflow/.github/workflows/codeql.yml@main
+
+  iac:
+    permissions:
+      contents: read
+      security-events: write
+    uses: pen-pal/centralized-workflow/.github/workflows/iac-scan.yml@main
+
+  scorecard:
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    uses: pen-pal/centralized-workflow/.github/workflows/ossf-scorecard.yml@main

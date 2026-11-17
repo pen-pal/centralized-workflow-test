@@ -16,6 +16,8 @@ jobs:
     permissions:
       contents: read
     uses: pen-pal/centralized-workflow/.github/workflows/test.yml@main
+    with:
+      clippy_all_targets: true
 
   precommit:
     permissions:
@@ -29,14 +31,23 @@ jobs:
       issues: write
     uses: pen-pal/centralized-workflow/.github/workflows/audit.yml@main
 
+  coverage:
+    permissions:
+      contents: read
+    uses: pen-pal/centralized-workflow/.github/workflows/coverage.yml@main
+    with:
+      min_coverage: 80
+
   check:
-    needs: precommit
+    needs: [precommit, coverage]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Duration output reaches the caller
         env:
           DURATION: ${{ needs.precommit.outputs.precommit_duration }}
+          COVERAGE: ${{ needs.coverage.outputs.line_coverage }}
         run: |
-          echo "precommit_duration=$DURATION"
+          echo "precommit_duration=$DURATION line_coverage=$COVERAGE"
           [[ "$DURATION" =~ ^[0-9]+$ ]]
+          [[ "$COVERAGE" =~ ^[0-9]+(\.[0-9]+)?$ ]]

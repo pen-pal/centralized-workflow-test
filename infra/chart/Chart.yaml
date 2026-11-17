@@ -1,0 +1,7 @@
+apiVersion: v2
+name: e2e-app
+description: Test chart for the k8s-validate and iac-scan workflows
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+icon: https://helm.sh/img/helm.svg

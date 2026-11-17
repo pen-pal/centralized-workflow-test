@@ -1,0 +1,28 @@
+name: App release
+
+# Manual only, so the test repo does not keep a release PR open:
+# runs centralized-workflow app-release.yml (release-please) at @main.
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  release:
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    uses: pen-pal/centralized-workflow/.github/workflows/app-release.yml@main
+
+  outputs:
+    needs: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Outputs reach the caller
+        env:
+          CREATED: ${{ needs.release.outputs.release_created }}
+          TAG: ${{ needs.release.outputs.tag_name }}
+        run: echo "release_created=${CREATED:-false} tag_name=${TAG:-none}"

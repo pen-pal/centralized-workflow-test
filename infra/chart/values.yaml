@@ -1,0 +1,12 @@
+replicaCount: 2
+image:
+  repository: ghcr.io/pen-pal/centralized-workflow-test
+  digest: sha256:33bb476f045a0125f4e1aef316dab4f0d502ba884b02750ee46941a181de0416
+port: 8080
+resources:
+  requests:
+    cpu: 50m
+    memory: 32Mi
+  limits:
+    cpu: 200m
+    memory: 64Mi
